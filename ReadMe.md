@@ -8,7 +8,7 @@ This host is not meant to cover all possible hosting scenarios. Instead, it is m
 How to Host the CoreCLR
 -----------------------
 
-The host in this repository walks through the following steps necessary to host the CoreCLR. The steps here match comments in host.cpp.
+The host in this repository walks through the following steps necessary to host the CoreCLR. The steps here match comments in [host.cpp](/SampleHost/host.cpp).
 
 1. Determine which managed assets to load, as appropriate. For most hosts, this is a matter of command line parsing.
 2. Find and load CoreCLR.dll, which the host will use to start the runtime. The .NET Core runtime will be most easily found if it is in a well-known location relative to the host or if it can be expected in the usual .NET Core install locations. In other scenarios, users may specify which CoreCLR.dll to use through command line parameters or environment variables.
