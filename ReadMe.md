@@ -3,7 +3,9 @@ Sample CoreCLR Host
 
 This repository contains a simple, bare-bones CoreCLR host used to demonstrate the steps necessary to start the .NET Core common language runtime, create a default AppDomain, and execute a managed assembly in it.
 
-This host is not meant to cover all possible hosting scenarios. Instead, it is made with the intention of demonstrating mainline hosting scenarios in an easy-to-follow way for learning purposes.
+This host is not meant to cover all possible hosting scenarios. Instead, it is made with the intention of demonstrating mainline hosting scenarios in an easy-to-follow way for learning purposes. Similarly, it's a little light on error checking and some design decisions were made to emphasize readability over efficiency.
+
+The host currently works only on Windows, though there are some comments speaking to cross-platform concerns and I may expand it to work on Unix at some point in the future. 
 
 How to Host the CoreCLR
 -----------------------

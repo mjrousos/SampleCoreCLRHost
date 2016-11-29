@@ -9,7 +9,7 @@
 	#define FS_SEPERATOR L"\\"
 	#define PATH_DELIMITER L";"
 	#define L(t) L##t
-#else // WINDOWS
+#else // !WINDOWS
 	// TODO -	To run cross-plat, more translation needs implemented here (ConvertToWSTR, for example).
 	//			This is just a start.
 	#include <string.h>
@@ -21,7 +21,7 @@
 	#define FS_SEPERATOR L"/"
 	#define PATH_DELIMITER L":"
 	#define L(t) ConvertToWSTR(t)
-#endif // WINDOWS
+#endif // #if WINDOWS
 
 static const wchar_t *coreCLRInstallDirectory = L("%programfiles%\\dotnet\\shared\\Microsoft.NETCore.App\\1.0.1");
 static const wchar_t* coreCLRDll = L("coreclr.dll"); // Main clr library to load
@@ -31,6 +31,12 @@ HMODULE LoadCoreCLR(const wchar_t* directoryPath);
 
 
 // One uber-main method to keep the sample streamlined
+// This function demonstrates how to start the .NET Core runtime,
+// create an AppDomain, and execute managed code.
+//
+// It is meant as an educational sample, so not all error paths are checked,
+// cross-platform functionality is not yet implemented, and some design
+// decisions have been made to emphasize readability over efficiency.
 int wmain(int argc, wchar_t* argv[])
 {
 
