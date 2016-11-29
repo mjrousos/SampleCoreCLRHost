@@ -4,7 +4,7 @@
 
 #if WINDOWS
 	#include <Windows.h>
-	#include "mscoree.h"
+	#include "mscoree.h"	// Generated from mscoree.idl
 
 	#define FS_SEPERATOR L"\\"
 	#define PATH_DELIMITER L";"

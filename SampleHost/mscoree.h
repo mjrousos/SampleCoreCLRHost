@@ -2,6 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+//
+// This header is typically generated via MIDL from src\inc\MSCOREE.IDL in the .NET Core
+// product source. (https://github.com/dotnet/coreclr/blob/master/src/inc/MSCOREE.IDL)
+//
+// To keep this sample as simple as possible, I'm using the pre-built version from
+// https://github.com/dotnet/coreclr/blob/master/src/pal/prebuilt/inc/mscoree.h (which is checked
+// in for use on non-Windows platforms where MIDL can't run).
+//
 
 /* this ALWAYS GENERATED file contains the definitions for the interfaces */
 
