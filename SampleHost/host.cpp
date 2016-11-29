@@ -12,6 +12,12 @@
 #else // !WINDOWS
 	// TODO -	To run cross-plat, more translation needs implemented here (ConvertToWSTR, for example).
 	//			This is just a start.
+	//
+	//			As a work item in the future, I may expand this host to work for both Windows and Unix
+	//			operating systems.
+	//
+	//			Because the code differences between Windows and Unix CoreCLR hosts are non-trivial,
+	//			developers sometimes just create two separate hosts for the two platforms.
 	#include <string.h>
 	#include <wchar.h>
 
@@ -23,8 +29,15 @@
 	#define L(t) ConvertToWSTR(t)
 #endif // #if WINDOWS
 
+// The host must be able to find CoreCLR.dll to start the runtime.
+// This string is used as a common, known location for a centrally installed CoreCLR.dll on Windows.
+// If your customers will have the CoreCLR.dll installed elsewhere, this will, of course, need modified.
+// Some hosts will carry the runtime and Framework with them locally so that necessary files like CoreCLR.dll 
+// are easy to find and known to be good versions.
 static const wchar_t *coreCLRInstallDirectory = L("%programfiles%\\dotnet\\shared\\Microsoft.NETCore.App\\1.0.1");
-static const wchar_t* coreCLRDll = L("coreclr.dll"); // Main clr library to load
+
+// Main clr library to load
+static const wchar_t* coreCLRDll = L("coreclr.dll");
 
 // Helper method to check for CoreCLR.dll in a given path and load it, if possible
 HMODULE LoadCoreCLR(const wchar_t* directoryPath);
@@ -45,9 +58,11 @@ int wmain(int argc, wchar_t* argv[])
 	//
 	if (argc < 2)
 	{
-		printf("ERROR - Specify exe to run as first parameter");
+		printf("ERROR - Specify exe to run as the app's first parameter");
 		return -1;
 	}
+	// The managed exe to run should be the first command line parameter.
+	// Subsequent command line parameters will be passed to the managed exe later in this host.
 	wchar_t targetApp[MAX_PATH];
 	GetFullPathNameW(argv[1], MAX_PATH, targetApp, NULL);
 
@@ -59,13 +74,13 @@ int wmain(int argc, wchar_t* argv[])
 	//
 	HMODULE coreCLRModule;
 
-	// Look in %CoreRoot%
+	// Look in %CORE_ROOT%
 	wchar_t coreRoot[MAX_PATH];
 	size_t outSize;
 	_wgetenv_s(&outSize, coreRoot, MAX_PATH, L("CORE_ROOT"));
 	coreCLRModule = LoadCoreCLR(coreRoot);
 
-	// Look in common 1.0.1 install directory
+	// If CoreCLR.dll wasn't in %CORE_ROOT%, look in the common 1.0.1 install directory
 	if (!coreCLRModule)
 	{
 		::ExpandEnvironmentStringsW(coreCLRInstallDirectory, coreRoot, MAX_PATH);
@@ -109,6 +124,7 @@ int wmain(int argc, wchar_t* argv[])
 	// STEP 4: Set desired startup flags and start the CLR
 	//
 	hr = runtimeHost->SetStartupFlags(
+		// These startup flags control runtime-wide behaviors
 		static_cast<STARTUP_FLAGS>(
 			// STARTUP_FLAGS::STARTUP_SERVER_GC |						// Use server GC
 			// STARTUP_FLAGS::STARTUP_LOADER_OPTIMIZATION_MULTI_DOMAIN |	// Maximize domain-neutral loading
@@ -124,6 +140,7 @@ int wmain(int argc, wchar_t* argv[])
 		return -1;
 	}
 
+	// Starting the runtime will initialize the JIT, GC, loader, etc.
 	hr = runtimeHost->Start();
 	if (FAILED(hr))
 	{
@@ -149,12 +166,14 @@ int wmain(int argc, wchar_t* argv[])
 
 	// TRUSTED_PLATFORM_ASSEMBLIES
 	// "Trusted Platform Assemblies" are prioritized by the loader and always loaded with full trust
-	// A good default is to include any assemblies next to CoreCLR.dll as platform assemblies
-
-	int tpaSize = 100 * MAX_PATH; // Starting size for our TPA list
+	// A common pattern is to include any assemblies next to CoreCLR.dll as platform assemblies.
+	// More sophisticated hosts may also include their own Framework extensions (such as AppDomain managers)
+	// in this list.
+	int tpaSize = 100 * MAX_PATH; // Starting size for our TPA (Trusted Platform Assemblies) list
 	wchar_t* trustedPlatformAssemblies = new wchar_t[tpaSize];
 	trustedPlatformAssemblies[0] = L('\0');
 
+	// Extensions to probe for when finding TPA list files
 	wchar_t *tpaExtensions[] = {
 		L("*.ni.dll"),		
 		L("*.dll"),
@@ -166,8 +185,7 @@ int wmain(int argc, wchar_t* argv[])
 
 	// Probe next to CoreCLR.dll for any files matching the extensions from tpaExtensions and
 	// add them to the TPA list. In a real host, this would likely be extracted into a separate function
-	// and may be run on other directories of interest.
-
+	// and perhaps run on other directories of interest.
 	for (int i = 0; i < _countof(tpaExtensions); i++)
 	{
 		wchar_t searchPath[MAX_PATH];
@@ -182,6 +200,7 @@ int wmain(int argc, wchar_t* argv[])
 		{
 			do
 			{
+				// Construct the full path of the trusted assembly
 				wchar_t pathToAdd[MAX_PATH];
 				wcscpy_s(pathToAdd, MAX_PATH, coreRoot);
 				wcscat_s(pathToAdd, MAX_PATH, FS_SEPERATOR);
@@ -196,8 +215,17 @@ int wmain(int argc, wchar_t* argv[])
 					trustedPlatformAssemblies = newTPAList;
 				}
 
+				// Add the assembly to the list
 				wcscat_s(trustedPlatformAssemblies, tpaSize, pathToAdd);
 				wcscat_s(trustedPlatformAssemblies, tpaSize, PATH_DELIMITER);
+
+				// Note that the CLR does not guarantee which assembly will be loaded if an assembly
+				// is in the TPA list multiple times (perhaps from different paths or perhaps with different NI/NI.dll
+				// extensions. Therefore, a real host should probably add items to the list in priority order and only
+				// add a file if it's not already present on the list.
+				//
+				// For this simple sample, though, and because we're only loading TPA assemblies from a single path,
+				// we can ignore that complication.
 			}
 			while (FindNextFileW(fileHandle, &findData));
 			FindClose(fileHandle);
@@ -208,7 +236,7 @@ int wmain(int argc, wchar_t* argv[])
 	// APP_PATHS
 	// App paths are directories to probe in for assemblies which are not one of the well-known Framework assemblies
 	// included in the TPA list.
-
+	//
 	// For this simple sample, we just include the directory the exe is in.
 	// More complex hosts may want to also check the current working directory or other
 	// locations known to contain application assets.
@@ -216,7 +244,6 @@ int wmain(int argc, wchar_t* argv[])
 
 	// Just use the targetApp provided by the user and remove the file name
 	wcscpy_s(appPaths, targetApp);
-
 	int i = wcslen(appPaths - 1);
 	while (i >= 0 && appPaths[i] != FS_SEPERATOR[0]) i--;
 	appPaths[i] = L('\0');
@@ -253,7 +280,13 @@ int wmain(int argc, wchar_t* argv[])
 
 
 	// AppDomainCompatSwitch
-	// Specifies compatibility behavior for the app domain
+	// Specifies compatibility behavior for the app domain. This indicates which compatibility
+	// quirks to apply if an assembly doesn't have an explicit Target Framework Moniker. If a TFM is
+	// present on an assembly, the runtime will always attempt to use quirks appropriate to the version
+	// of the TFM.
+	// 
+	// Typically the latest behavior is desired, but some hosts may want to default to older Silverlight
+	// or Windows Phone behaviors for compatibility reasons.
 	wchar_t* appDomainCompatSwitch = L("UseLatestBehaviorWhenTFMNotSpecified");
 
 
@@ -306,6 +339,7 @@ int wmain(int argc, wchar_t* argv[])
 	//
 	DWORD exitCode = -1;
 
+	// ExecuteAssembly will load a managed assembly and execute its entry point.
 	printf("Executing managed code...\n\n");
 	hr = runtimeHost->ExecuteAssembly(domainId, targetApp, argc - 1, (LPCWSTR*)(argc > 1 ? &argv[1] : NULL), &exitCode);
 
