@@ -26,7 +26,10 @@ The host in this repository walks through the following steps necessary to host 
 6. Create the default AppDomain with a call to `ICLRRuntimeHost2::CreateAppDomainWithManager`. Note that an AppDomain manager may optionally be provided here to control some aspects of AppDomain behavior and to provide a convenient entry-point for the host in scenarios in which the user doesn't provide one.
 	1. Again, Unix hosts will likely use `coreclr_initialize` to accomplish this.
 7. Run managed code using `ICLRRuntimeHost2::ExecuteAssembly`. This function takes path to managed assembly and executes its entry point.
+	1. Alternatively, if you want to run managed code that isn't an entrypoint, `ICLRRuntimeHost2::CreateDelegate` can create a function pointer to arbitrary static managed methods.
+	2. In Unix hosts, managed code is most easily launched with the `coreclr_execute_assembly` API. 
 8. Cleanup by unloading the AppDomain, and stopping/releasing the CoreCLR.
+	1. On Unix, use `coreclr_shutdown`.
 
 Other Resources
 ---------------

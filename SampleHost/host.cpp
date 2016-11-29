@@ -26,28 +26,8 @@
 static const wchar_t *coreCLRInstallDirectory = L("%programfiles%\\dotnet\\shared\\Microsoft.NETCore.App\\1.0.1");
 static const wchar_t* coreCLRDll = L("coreclr.dll"); // Main clr library to load
 
-
-
 // Helper method to check for CoreCLR.dll in a given path and load it, if possible
-HMODULE LoadCoreCLR(const wchar_t* directoryPath) 
-{
-	wchar_t coreDllPath[MAX_PATH];
-	wcscpy_s(coreDllPath, MAX_PATH, directoryPath);
-	wcscat_s(coreDllPath, MAX_PATH, FS_SEPERATOR);
-	wcscat_s(coreDllPath, MAX_PATH, coreCLRDll);
-
-#if WINDOWS
-	HMODULE ret = LoadLibraryExW(coreDllPath, NULL, 0);
-	if (!ret)
-	{
-		wprintf(L("WARNING - Failed to load %s\n"), coreDllPath);
-	}
-	return ret;
-#else
-
-#endif
-}
-
+HMODULE LoadCoreCLR(const wchar_t* directoryPath);
 
 
 // One uber-main method to keep the sample streamlined
@@ -328,7 +308,11 @@ int wmain(int argc, wchar_t* argv[])
 		printf("ERROR - Failed to execute %s.\nError code:%x\n", targetApp, hr);
 		return -1;
 	}
-	// TODO - Mention running a method instead of an exe
+
+	// Alternatively, to start managed code execution with a method other than an assembly's entrypoint,
+	// runtimeHost->CreateDelegate can be used to create a pointer to an arbitrary static managed method which
+	// can then be executed directly or via runtimeHost->ExecuteInAppDomain.
+
 
 
 
@@ -345,3 +329,22 @@ int wmain(int argc, wchar_t* argv[])
 
 	return exitCode;
 }
+
+// Helper methods
+
+// Check for CoreCLR.dll in a given path and load it, if possible
+HMODULE LoadCoreCLR(const wchar_t* directoryPath)
+{
+	wchar_t coreDllPath[MAX_PATH];
+	wcscpy_s(coreDllPath, MAX_PATH, directoryPath);
+	wcscat_s(coreDllPath, MAX_PATH, FS_SEPERATOR);
+	wcscat_s(coreDllPath, MAX_PATH, coreCLRDll);
+
+#if WINDOWS
+	HMODULE ret = LoadLibraryExW(coreDllPath, NULL, 0);
+	return ret;
+#else
+	// TODO
+#endif
+}
+
