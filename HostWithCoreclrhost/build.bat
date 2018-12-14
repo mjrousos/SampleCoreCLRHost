@@ -10,4 +10,4 @@ echo Building Managed Library
 dotnet publish --self-contained -r win10-x64 %SRCDIR%\ManagedLibrary\ManagedLibrary.csproj -o %OUTDIR%
 
 REM Build native component
-cl.exe %SRCDIR%\SampleHost.cpp /Fo%OUTDIR%\ /link /out:%OUTDIR%\SampleHost.exe
+cl.exe %SRCDIR%\SampleHost.cpp /Fo%OUTDIR%\ /EHsc /Od /sdl /Zi /D "WINDOWS" /link /out:%OUTDIR%\SampleHost.exe

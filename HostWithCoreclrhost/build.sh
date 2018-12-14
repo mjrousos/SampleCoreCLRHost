@@ -13,4 +13,4 @@ echo Building Managed Library
 dotnet publish --self-contained -r linux-x64 ${SRCDIR}/ManagedLibrary/ManagedLibrary.csproj -o ${OUTDIR}
 
 # Build native component
-g++ -o ${OUTDIR}/SampleHost ${SRCDIR}/SampleHost.cpp
+g++ -o ${OUTDIR}/SampleHost -D LINUX ${SRCDIR}/SampleHost.cpp -ldl
