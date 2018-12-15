@@ -66,6 +66,35 @@ int main(int argc, char* argv[])
         printf("Loaded CoreCLR from %s\n", coreClrPath.c_str());
     }
 
+    // Get CoreCLR hosting functions
+#if WINDOWS
+    coreclr_initialize_ptr initializeCoreClr = (coreclr_initialize_ptr)GetProcAddress(coreClr, "coreclr_initialize");
+    coreclr_create_delegate_ptr createManagedDelegate = (coreclr_create_delegate_ptr)GetProcAddress(coreClr, "coreclr_create_delegate");
+    coreclr_shutdown_2_ptr shutdownCoreClr = (coreclr_shutdown_2_ptr)GetProcAddress(coreClr, "coreclr_shutdown_2");
+#elif LINUX    
+    coreclr_initialize_ptr initializeCoreClr = (coreclr_initialize_ptr)dlsym(coreClr, "coreclr_initialize");
+    coreclr_create_delegate_ptr createManagedDelegate = (coreclr_create_delegate_ptr)dlsym(coreClr, "coreclr_create_delegate");
+    coreclr_shutdown_2_ptr shutdownCoreClr = (coreclr_shutdown_2_ptr)dlsym(coreClr, "coreclr_shutdown_2");
+#endif
+
+    if (initializeCoreClr == NULL)
+    {
+        printf("coreclr_initialize not found");
+        return -1;
+    }
+
+    if (createManagedDelegate == NULL)
+    {
+        printf("coreclr_create_delegate not found");
+        return -1;
+    }
+
+    if (shutdownCoreClr == NULL)
+    {
+        printf("coreclr_shutdown_2 not found");
+        return -1;
+    }
+
     // Construct the trusted platform assemblies (TPA) list
     // This is the list of assemblies that .NET Core can load as
     // trusted system assemblies (similar to the .NET Framework GAC).
@@ -74,6 +103,41 @@ int main(int argc, char* argv[])
     std::string tpaList;
     BuildTpaList(runtimePath, ".dll", tpaList);
 
+    // Define CoreCLR properties
+    const char* propertyKeys[] = {
+        "TRUSTED_PLATFORM_ASSEMBLIES",      // Trusted assemblies (like the GAC)
+        "APP_PATHS",                        // Directories to probe for application assemblies
+        // "APP_NI_PATHS",                     // Directories to probe for application native images (not used in this sample)
+        // "NATIVE_DLL_SEARCH_DIRECTORIES",    // Directories to probe for native dlls (not used in this sample)
+    };
+
+    const char* propertyValues[] = {
+        tpaList.c_str(),
+        runtimePath
+    };
+
+    // Start the CoreCLR runtime
+    void* hostHandle;
+    unsigned int domainId;
+
+    int result = initializeCoreClr(
+                    runtimePath,        // AppDomain base path
+                    "SampleHost",       // AppDomain friendly name
+                    sizeof(propertyKeys) / sizeof(char*),   // Property count
+                    propertyKeys,       // Property names
+                    propertyValues,     // Property values
+                    &hostHandle,        // Host handle
+                    &domainId);         // AppDomain ID
+
+    if (result >= 0)
+    {
+        printf("CoreCLR started; AppDomain %d created\n", domainId);
+    }
+    else
+    {
+        printf("coreclr_initialize failed - status: 0x%08x\n", result);
+        return -1;
+    }                    
 
     return 0;
 }
