@@ -21,7 +21,12 @@
 #define CORECLR_FILE_NAME "libcoreclr.so"
 #endif
 
+// Function pointers type for the managed call and callback
+typedef int (*report_callback_ptr)(int progress);
+typedef char* (*doWork_ptr)(char* jobName, int iterations, int dataSize, double* data, report_callback_ptr callbackFunction);
+
 void BuildTpaList(const char* directory, const char* extension, std::string& tpaList);
+int ReportProgressCallback(int progress);
 
 int main(int argc, char* argv[])
 {
@@ -70,11 +75,11 @@ int main(int argc, char* argv[])
 #if WINDOWS
     coreclr_initialize_ptr initializeCoreClr = (coreclr_initialize_ptr)GetProcAddress(coreClr, "coreclr_initialize");
     coreclr_create_delegate_ptr createManagedDelegate = (coreclr_create_delegate_ptr)GetProcAddress(coreClr, "coreclr_create_delegate");
-    coreclr_shutdown_2_ptr shutdownCoreClr = (coreclr_shutdown_2_ptr)GetProcAddress(coreClr, "coreclr_shutdown_2");
+    coreclr_shutdown_ptr shutdownCoreClr = (coreclr_shutdown_ptr)GetProcAddress(coreClr, "coreclr_shutdown");
 #elif LINUX    
     coreclr_initialize_ptr initializeCoreClr = (coreclr_initialize_ptr)dlsym(coreClr, "coreclr_initialize");
     coreclr_create_delegate_ptr createManagedDelegate = (coreclr_create_delegate_ptr)dlsym(coreClr, "coreclr_create_delegate");
-    coreclr_shutdown_2_ptr shutdownCoreClr = (coreclr_shutdown_2_ptr)dlsym(coreClr, "coreclr_shutdown_2");
+    coreclr_shutdown_ptr shutdownCoreClr = (coreclr_shutdown_ptr)dlsym(coreClr, "coreclr_shutdown");
 #endif
 
     if (initializeCoreClr == NULL)
@@ -91,7 +96,7 @@ int main(int argc, char* argv[])
 
     if (shutdownCoreClr == NULL)
     {
-        printf("coreclr_shutdown_2 not found");
+        printf("coreclr_shutdown not found");
         return -1;
     }
 
@@ -120,7 +125,7 @@ int main(int argc, char* argv[])
     void* hostHandle;
     unsigned int domainId;
 
-    int result = initializeCoreClr(
+    int hr = initializeCoreClr(
                     runtimePath,        // AppDomain base path
                     "SampleHost",       // AppDomain friendly name
                     sizeof(propertyKeys) / sizeof(char*),   // Property count
@@ -129,16 +134,73 @@ int main(int argc, char* argv[])
                     &hostHandle,        // Host handle
                     &domainId);         // AppDomain ID
 
-    if (result >= 0)
+    if (hr >= 0)
     {
         printf("CoreCLR started; AppDomain %d created\n", domainId);
     }
     else
     {
-        printf("coreclr_initialize failed - status: 0x%08x\n", result);
+        printf("coreclr_initialize failed - status: 0x%08x\n", hr);
         return -1;
-    }                    
+    }                  
 
+
+    // Create delegate to managed code
+    doWork_ptr managedDelegate;    
+    hr = createManagedDelegate(
+            hostHandle, 
+            domainId,
+            "ManagedLibrary",
+            "ManagedLibrary.ManagedWorker",
+            "DoWork",
+            (void**)&managedDelegate);
+
+    if (hr >= 0)
+    {
+        printf("Managed delegate created\n");
+    }
+    else
+    {
+        printf("coreclr_create_delegate failed - status: 0x%08x\n", hr);
+        return -1;
+    }    
+
+    // Invoking managed delegate
+    double data[4];
+    data[0] = 0; 
+    data[1] = 0.25;
+    data[2] = 0.5;
+    data[3] = 0.75;
+    char* ret = managedDelegate("Test job", 10, sizeof(data) / sizeof(double), data, ReportProgressCallback);
+
+    printf("Managed code returned: %s\n", ret);
+
+    // Native code is responsible for freeing returned managed strings
+    free(ret);
+
+    // Shutdown CoreCLR
+    hr = shutdownCoreClr(hostHandle, domainId);
+
+    if (hr >= 0)
+    {
+        printf("CoreCLR successfully shutdown\n");
+    }
+    else
+    {
+        printf("coreclr_shutdown failed - status: 0x%08x\n", hr);
+    }
+
+#if WINDOWS
+    if (!FreeLibrary(coreClr))
+    {
+        printf("Failed to free coreclr.dll\n");
+    }
+#elif LINUX
+    if(dlclose(coreClr))
+    {
+        printf("Failed to free libcoreclr.so\n");
+    }
+#endif
     return 0;
 }
 
@@ -212,3 +274,10 @@ void BuildTpaList(const char* directory, const char* extension, std::string& tpa
     }
 }
 #endif
+
+// Callback function passed to managed code to facilitate calling back into native code with status
+int ReportProgressCallback(int progress)
+{
+    printf("Received status from managed code: %d\n", progress);
+    return -progress;
+}
