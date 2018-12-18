@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
     data[1] = 0.25;
     data[2] = 0.5;
     data[3] = 0.75;
-    const char* ret = managedDelegate("Test job", 3, sizeof(data) / sizeof(double), data, ReportProgressCallback);
+    const char* ret = managedDelegate("Test job", 5, sizeof(data) / sizeof(double), data, ReportProgressCallback);
 
     printf("Managed code returned: %s\n", ret);
 
