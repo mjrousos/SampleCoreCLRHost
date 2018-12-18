@@ -12,6 +12,7 @@ namespace ManagedLibrary
         // This test method doesn't actually do anything, it just takes some input parameters,
         // waits (in a loop) for a bit, invoking the callback function periodically, and
         // then returns a string version of the double[] passed in.
+        [return: MarshalAs(UnmanagedType.LPStr)]
         public static string DoWork(string jobName, int iterations, int dataSize, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex=2)] double[] data, ReportProgressFunction reportProgressFunction)
         {
             for (int i = 1; i <= iterations; i++)

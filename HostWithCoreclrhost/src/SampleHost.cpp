@@ -23,7 +23,7 @@
 
 // Function pointers type for the managed call and callback
 typedef int (*report_callback_ptr)(int progress);
-typedef char* (*doWork_ptr)(char* jobName, int iterations, int dataSize, double* data, report_callback_ptr callbackFunction);
+typedef const char* (*doWork_ptr)(const char* jobName, int iterations, int dataSize, double* data, report_callback_ptr callbackFunction);
 
 void BuildTpaList(const char* directory, const char* extension, std::string& tpaList);
 int ReportProgressCallback(int progress);
@@ -171,12 +171,9 @@ int main(int argc, char* argv[])
     data[1] = 0.25;
     data[2] = 0.5;
     data[3] = 0.75;
-    char* ret = managedDelegate("Test job", 10, sizeof(data) / sizeof(double), data, ReportProgressCallback);
+    const char* ret = managedDelegate("Test job", 3, sizeof(data) / sizeof(double), data, ReportProgressCallback);
 
     printf("Managed code returned: %s\n", ret);
-
-    // Native code is responsible for freeing returned managed strings
-    free(ret);
 
     // Shutdown CoreCLR
     hr = shutdownCoreClr(hostHandle, domainId);
