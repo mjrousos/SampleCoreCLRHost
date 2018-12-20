@@ -34,7 +34,7 @@
 // If your customers will have the CoreCLR.dll installed elsewhere, this will, of course, need modified.
 // Some hosts will carry the runtime and Framework with them locally so that necessary files like CoreCLR.dll 
 // are easy to find and known to be good versions.
-static const wchar_t *coreCLRInstallDirectory = L("%programfiles%\\dotnet\\shared\\Microsoft.NETCore.App\\1.0.1");
+static const wchar_t *coreCLRInstallDirectory = L("%programfiles%\\dotnet\\shared\\Microsoft.NETCore.App\\2.0.3");
 
 // Main clr library to load
 static const wchar_t* coreCLRDll = L("coreclr.dll");
@@ -92,7 +92,10 @@ int wmain(int argc, wchar_t* argv[])
 		printf("ERROR - CoreCLR.dll could not be found");
 		return -1;
 	}
-
+	else
+	{
+		wprintf(L("Found CoreCLR: %s\n"), coreRoot);
+	}
 
 
 
@@ -341,12 +344,18 @@ int wmain(int argc, wchar_t* argv[])
 
 	// ExecuteAssembly will load a managed assembly and execute its entry point.
 	printf("Executing managed code...\n\n");
+	
 	hr = runtimeHost->ExecuteAssembly(domainId, targetApp, argc - 1, (LPCWSTR*)(argc > 1 ? &argv[1] : NULL), &exitCode);
+	// hr = runtimeHost->ExecuteInDefaultAppDomain(targetApp, L("SampleApp.Program"), L("Main"), L(""), &exitCode);
 
 	if (FAILED(hr))
 	{
-		printf("ERROR - Failed to execute %s.\nError code:%x\n", targetApp, hr);
+		wprintf(L("ERROR - Failed to execute %s.\nError code:%x\n"), targetApp, hr);
 		return -1;
+	}
+	else
+	{
+		printf("App returned %d\n", exitCode);
 	}
 
 	// Alternatively, to start managed code execution with a method other than an assembly's entrypoint,
