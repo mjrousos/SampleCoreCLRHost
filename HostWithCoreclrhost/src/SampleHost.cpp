@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
     managedLibraryPath.append(FS_SEPERATOR);
     managedLibraryPath.append(MANAGED_ASSEMBLY);
     
-    // Load CoreCLR
+    // Step 1: Load CoreCLR (coreclr.dll/libcoreclr.so)
 #if WINDOWS
     HMODULE coreClr = LoadLibraryExA(coreClrPath.c_str(), NULL, 0);
 #elif LINUX 
@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
         printf("Loaded CoreCLR from %s\n", coreClrPath.c_str());
     }
 
-    // Get CoreCLR hosting functions
+    // Step 2: Get CoreCLR hosting functions
 #if WINDOWS
     coreclr_initialize_ptr initializeCoreClr = (coreclr_initialize_ptr)GetProcAddress(coreClr, "coreclr_initialize");
     coreclr_create_delegate_ptr createManagedDelegate = (coreclr_create_delegate_ptr)GetProcAddress(coreClr, "coreclr_create_delegate");
@@ -100,6 +100,8 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    // Step 3: Construct AppDomain properties used when starting the runtime
+
     // Construct the trusted platform assemblies (TPA) list
     // This is the list of assemblies that .NET Core can load as
     // trusted system assemblies (similar to the .NET Framework GAC).
@@ -121,7 +123,7 @@ int main(int argc, char* argv[])
         runtimePath
     };
 
-    // Start the CoreCLR runtime
+    // Step 4: Start the CoreCLR runtime
     void* hostHandle;
     unsigned int domainId;
 
@@ -145,7 +147,7 @@ int main(int argc, char* argv[])
     }                  
 
 
-    // Create delegate to managed code
+    // Step 5: Create delegate to managed code
     doWork_ptr managedDelegate;    
     hr = createManagedDelegate(
             hostHandle, 
@@ -165,7 +167,7 @@ int main(int argc, char* argv[])
         return -1;
     }    
 
-    // Invoking managed delegate
+    // Step 5.2: Invoking managed delegate
     double data[4];
     data[0] = 0; 
     data[1] = 0.25;
@@ -175,7 +177,7 @@ int main(int argc, char* argv[])
 
     printf("Managed code returned: %s\n", ret);
 
-    // Shutdown CoreCLR
+    // Step 6: Shutdown CoreCLR
     hr = shutdownCoreClr(hostHandle, domainId);
 
     if (hr >= 0)

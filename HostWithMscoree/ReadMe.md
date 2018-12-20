@@ -1,4 +1,4 @@
-Sample CoreCLR Host (MSCoree)
+Sample .NET Core Host (MSCoree)
 =============================
 
 This repository contains a simple, bare-bones CoreCLR host using the `ICLRRuntimeHost2` interface from mscoree.h to demonstrate the steps necessary to start the .NET Core common language runtime, create a default AppDomain, and execute a managed assembly in it.
@@ -7,8 +7,8 @@ This host is not meant to cover all possible hosting scenarios. Instead, it is m
 
 The host currently works only on Windows, though there are some comments speaking to cross-platform concerns and I may expand it to work on Unix at some point in the future. 
 
-How to Host the CoreCLR
------------------------
+How to Host .NET Core
+---------------------
 
 The host in this repository walks through the following steps necessary to host the CoreCLR using the `ICLRRuntimeHost2` interface from mscoree.h. The steps here match comments in [host.cpp](host.cpp).
 
